@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaPay — Transaction Categories</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F0F2F8;
+      --card:         #FFFFFF;
+      --accent:       #6C63FF;
+      --accent-light: #EEEEFF;
+      --text:         #0D0F1C;
+      --muted:        #8B92A5;
+      --border:       #E8ECF2;
+      --debit:        #FF4757;
+      --credit:       #00C896;
+      --shadow:       0 2px 12px rgba(13,15,28,0.08);
+      --r:            16px;
+      --r-sm:         10px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      height: 60px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-logo {
+      font-size: 1.2em;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--accent);
+    }
+    .app-logo span { color: var(--text); }
+
+    /* ── MAIN ───────────────────────────────── */
+    .main {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--r);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 0.72em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── CATEGORY FILTERS ───────────────────── */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 2px solid var(--border);
+      border-radius: 100px;
+      background: white;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    /* ── TRANSACTIONS ───────────────────────── */
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tx-item:last-child { border-bottom: none; }
+
+    .tx-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25em;
+      flex-shrink: 0;
+    }
+
+    .tx-meta { flex: 1; min-width: 0; }
+
+    .tx-name {
+      font-size: 0.92em;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tx-sub {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+    }
+
+    .tx-date {
+      font-size: 0.75em;
+      color: var(--muted);
+    }
+
+    .tx-category-tag {
+      font-size: 0.7em;
+      font-weight: 600;
+      text-transform: capitalize;
+      color: var(--accent);
+      background: var(--accent-light);
+      border-radius: 100px;
+      padding: 1px 8px;
+    }
+
+    .tx-amount {
+      font-size: 0.92em;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .tx-amount.debit  { color: var(--debit);  }
+    .tx-amount.credit { color: var(--credit); }
+
+    .empty-state {
+      padding: 24px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-logo">nova<span>pay</span></div>
+  </header>
+
+  <main class="main">
+
+    <div class="card">
+      <div class="card-title">Transactions by Category</div>
+
+      <!-- Category filter controls, built dynamically from CATEGORIES below -->
+      <div class="filter-row" id="filter-row"></div>
+
+      <!-- Filtered transaction list gets rendered here -->
+      <div id="tx-list"></div>
+    </div>
+
+  </main>
+
+  <script>
+    // ── CATEGORY DEFINITIONS ───────────────────────────────────
+    // Each category has an icon used both on the filter chips and on
+    // any transaction that belongs to it.
+    const CATEGORIES = {
+      coffee:       { label: "Coffee",       icon: "☕" },
+      shopping:     { label: "Shopping",     icon: "🛍️" },
+      transport:    { label: "Transport",    icon: "🚌" },
+      subscription: { label: "Subscription", icon: "🎵" },
+      income:       { label: "Income",       icon: "💷" }
+    };
+
+    // ── TRANSACTIONS ───────────────────────────────────────────
+    // Reused from bank-dashboard.html's "Recent Transactions" list,
+    // with a "category" added to each so they can be filtered/tagged
+    // with an icon. Amount sign/type kept as debit (money out) or
+    // credit (money in).
+    const transactions = [
+      { name: "Costa Coffee",       date: "Today, 09:14", amount: 3.80,    type: "debit",  category: "coffee" },
+      { name: "Salary — Acme Ltd",  date: "1 Jul, 08:00", amount: 2450.00, type: "credit", category: "income" },
+      { name: "Tesco Express",      date: "30 Jun, 18:32", amount: 14.30, type: "debit",  category: "shopping" },
+      { name: "Spotify",            date: "28 Jun, 00:00", amount: 9.99,  type: "debit",  category: "subscription" },
+      { name: "Amazon",             date: "27 Jun, 14:21", amount: 28.99, type: "debit",  category: "shopping" }
+    ];
+
+    // Currently selected filter — "all" shows every transaction.
+    let activeFilter = "all";
+
+    // Builds the "All / Coffee / Shopping / Transport / ..." filter chips.
+    function renderFilters() {
+      const row = document.getElementById("filter-row");
+      row.innerHTML = "";
+
+      const allBtn = makeFilterButton("all", "All", "💳");
+      row.appendChild(allBtn);
+
+      for (const key in CATEGORIES) {
+        const { label, icon } = CATEGORIES[key];
+        row.appendChild(makeFilterButton(key, label, icon));
+      }
+    }
+
+    function makeFilterButton(key, label, icon) {
+      const btn = document.createElement("button");
+      btn.className = "filter-btn" + (key === activeFilter ? " active" : "");
+      btn.textContent = icon + " " + label;
+      btn.onclick = () => {
+        activeFilter = key;
+        renderFilters();
+        renderTransactions();
+      };
+      return btn;
+    }
+
+    // Filters the transaction list by the active category, then renders it.
+    function renderTransactions() {
+      const list = document.getElementById("tx-list");
+      list.innerHTML = "";
+
+      const filtered = activeFilter === "all"
+        ? transactions
+        : transactions.filter(tx => tx.category === activeFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state">No transactions in this category yet.</div>';
+        return;
+      }
+
+      filtered.forEach(tx => list.appendChild(renderTxItem(tx)));
+    }
+
+    // Builds a single transaction row, showing its category icon + tag.
+    function renderTxItem(tx) {
+      const category = CATEGORIES[tx.category] || { label: tx.category, icon: "💳" };
+      const sign = tx.type === "credit" ? "+" : "−";
+
+      const item = document.createElement("div");
+      item.className = "tx-item";
+      item.innerHTML = `
+        <div class="tx-icon">${category.icon}</div>
+        <div class="tx-meta">
+          <div class="tx-name">${tx.name}</div>
+          <div class="tx-sub">
+            <span class="tx-date">${tx.date}</span>
+            <span class="tx-category-tag">${category.label}</span>
+          </div>
+        </div>
+        <div class="tx-amount ${tx.type}">${sign}£${tx.amount.toFixed(2)}</div>
+      `;
+      return item;
+    }
+
+    // Initial render on page load.
+    renderFilters();
+    renderTransactions();
+  </script>
+
+</body>
+</html>
